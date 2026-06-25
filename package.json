@@ -1,0 +1,32 @@
+{
+  "name": "wildmind-ai",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "WildMind AI — an AI-powered wildlife encyclopedia built with React, Vite and Ollama.",
+  "scripts": {
+    "dev": "concurrently -k -n SERVER,CLIENT -c green,cyan \"node server/index.js\" \"vite\"",
+    "client": "vite",
+    "server": "node server/index.js",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "framer-motion": "^11.3.8",
+    "lucide-react": "^0.412.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.25.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "vite": "^5.3.5"
+  }
+}

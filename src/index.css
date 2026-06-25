@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #080c12;
+  color: #e8f4ea;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  /* Subtle ambient bioluminescent gradient backdrop */
+  background-image: radial-gradient(
+      circle at 15% 10%,
+      rgba(57, 255, 20, 0.06),
+      transparent 40%
+    ),
+    radial-gradient(circle at 85% 90%, rgba(212, 168, 67, 0.05), transparent 45%);
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: 'Playfair Display', serif;
+}
+
+/* Glassmorphism surface */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+.glass-hover:hover {
+  box-shadow: 0 0 24px rgba(57, 255, 20, 0.08);
+  border-color: rgba(57, 255, 20, 0.25);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(57, 255, 20, 0.15);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(57, 255, 20, 0.3);
+}
+
+/* Shimmer skeleton effect */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Markdown rendering inside streamed AI content */
+.markdown-body h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem;
+  color: #39ff14;
+  margin: 1.75rem 0 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(57, 255, 20, 0.15);
+}
+.markdown-body h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  color: #e8f4ea;
+  margin: 1.25rem 0 0.5rem;
+}
+.markdown-body p {
+  margin: 0.6rem 0;
+  line-height: 1.75;
+  color: #e8f4ea;
+}
+.markdown-body ul {
+  margin: 0.6rem 0;
+  padding-left: 1.25rem;
+  list-style: none;
+}
+.markdown-body ul li {
+  position: relative;
+  margin: 0.4rem 0;
+  padding-left: 1.25rem;
+  line-height: 1.7;
+  color: #e8f4ea;
+}
+.markdown-body ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.65rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #39ff14;
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.6);
+}
+.markdown-body ol {
+  margin: 0.6rem 0;
+  padding-left: 1.5rem;
+  list-style: decimal;
+}
+.markdown-body ol li {
+  margin: 0.4rem 0;
+  padding-left: 0.25rem;
+  line-height: 1.7;
+  color: #e8f4ea;
+}
+.markdown-body ol li::marker {
+  color: #39ff14;
+  font-weight: 600;
+}
+.markdown-body strong {
+  color: #d4a843;
+  font-weight: 600;
+}
+.markdown-body em {
+  color: #e8f4ea;
+  font-style: italic;
+}
+.markdown-body blockquote {
+  margin: 0.75rem 0;
+  padding: 0.25rem 0 0.25rem 1rem;
+  border-left: 3px solid rgba(57, 255, 20, 0.4);
+  color: #b9cdbb;
+}
+.markdown-body blockquote p {
+  margin: 0.25rem 0;
+}
+.markdown-body h4 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  color: #e8f4ea;
+  margin: 1rem 0 0.4rem;
+}
+/* Trim the leading margin so a message/section doesn't start with a big gap */
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
