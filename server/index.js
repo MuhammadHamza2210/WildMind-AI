@@ -25,6 +25,12 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 
+// Groq is a free, fast backup LLM. If Gemini fails (overload / quota / down),
+// we fall back to Groq so the live site keeps working. Key is server-side only.
+const GROQ_API_KEY = process.env.GROQ_API_KEY
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+
 const FALLBACK_IMAGE =
   'https://images.pexels.com/photos/247431/pexels-photo-247431.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
 
@@ -90,10 +96,80 @@ function profilePrompt(animalName) {
   )
 }
 
-// ── Shared Gemini streaming helper ────────────────────────────────────
+// Convert Gemini-style contents + systemInstruction into OpenAI/Groq messages.
+function toGroqMessages(contents, systemInstruction) {
+  const messages = []
+  const sysText =
+    typeof systemInstruction === 'string'
+      ? systemInstruction
+      : systemInstruction?.parts?.map((p) => p.text || '').join('') || ''
+  if (sysText) messages.push({ role: 'system', content: sysText })
+  for (const c of contents || []) {
+    const text = (c.parts || []).map((p) => p.text || '').join('')
+    messages.push({ role: c.role === 'model' ? 'assistant' : 'user', content: text })
+  }
+  return messages
+}
+
+// ── Groq fallback: streams Groq output, re-emitted in the Gemini SSE shape ──
+// Returns true if it handled the response, false if it couldn't start (so the
+// caller can still send a normal error). Key safety: GROQ_API_KEY stays server-side.
+async function streamGroq(res, contents, systemInstruction, generationConfig) {
+  if (!GROQ_API_KEY) return false
+  let upstream
+  try {
+    upstream = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: toGroqMessages(contents, systemInstruction),
+        stream: true,
+        temperature: generationConfig?.temperature ?? 0.7,
+        max_tokens: generationConfig?.maxOutputTokens ?? 1024,
+      }),
+    })
+  } catch {
+    return false
+  }
+  if (!upstream.ok || !upstream.body) return false
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+
+  // Parse Groq's OpenAI-style SSE and translate each token into the Gemini shape
+  // the frontend already understands: data: {candidates:[{content:{parts:[{text}]}}]}
+  let buffer = ''
+  for await (const chunk of Readable.fromWeb(upstream.body)) {
+    buffer += chunk.toString('utf8')
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) {
+      const t = line.trim()
+      if (!t.startsWith('data:')) continue
+      const payload = t.slice(5).trim()
+      if (!payload || payload === '[DONE]') continue
+      try {
+        const j = JSON.parse(payload)
+        const text = j.choices?.[0]?.delta?.content || ''
+        if (text) {
+          res.write(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] })}\n\n`)
+        }
+      } catch {
+        /* partial JSON across reads */
+      }
+    }
+  }
+  res.end()
+  return true
+}
+
+// ── Shared Gemini streaming helper (with Groq fallback) ───────────────
 async function streamGemini(res, contents, systemInstruction, generationConfig) {
   if (!GEMINI_API_KEY) {
-    return res.status(503).json({ error: 'Gemini is not configured on the server.' })
+    if (await streamGroq(res, contents, systemInstruction, generationConfig)) return
+    return res.status(503).json({ error: 'No AI backend is configured on the server.' })
   }
 
   const url = `${GEMINI_BASE}/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`
@@ -110,10 +186,14 @@ async function streamGemini(res, contents, systemInstruction, generationConfig) 
       }),
     })
   } catch (err) {
+    if (await streamGroq(res, contents, systemInstruction, generationConfig)) return
     return res.status(502).json({ error: `Could not reach Gemini: ${err.message}` })
   }
 
   if (!upstream.ok) {
+    // Gemini failed (overload / quota / etc.) — try the Groq fallback before erroring.
+    console.warn(`Gemini failed (${upstream.status}); trying Groq fallback...`)
+    if (await streamGroq(res, contents, systemInstruction, generationConfig)) return
     let detail = ''
     try {
       const j = await upstream.json()
@@ -160,5 +240,5 @@ if (fs.existsSync(DIST)) {
 
 app.listen(PORT, () => {
   console.log(`🌿 WildMind API proxy running at http://localhost:${PORT}`)
-  console.log(`   Pexels: ${PEXELS_API_KEY ? 'configured' : 'MISSING'} · Gemini: ${GEMINI_API_KEY ? 'configured' : 'MISSING'} (${GEMINI_MODEL})`)
+  console.log(`   Pexels: ${PEXELS_API_KEY ? 'configured' : 'MISSING'} · Gemini: ${GEMINI_API_KEY ? 'configured' : 'MISSING'} (${GEMINI_MODEL}) · Groq fallback: ${GROQ_API_KEY ? 'configured' : 'off'} (${GROQ_MODEL})`)
 })
