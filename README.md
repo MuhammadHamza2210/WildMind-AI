@@ -10,6 +10,8 @@ pinned: false
 
 # 🦉 WildMind AI
 
+> 🔴 **Live demo:** **https://muhammadhamza221003-wildmind-ai.hf.space**
+
 An AI-powered wildlife encyclopedia. Search any animal and WildMind generates a rich,
 streaming summary. It supports **two AI backends** and picks one automatically:
 
