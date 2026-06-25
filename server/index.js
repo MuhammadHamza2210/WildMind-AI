@@ -22,7 +22,7 @@ const DIST = path.join(ROOT, 'dist')
 const PORT = process.env.PORT || 3001
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest'
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 const FALLBACK_IMAGE =
