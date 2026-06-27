@@ -173,32 +173,41 @@ export default function AnimalProfile() {
             <div className="flex flex-col items-start gap-3 rounded-card border border-status-critical/30 bg-status-critical/5 p-5">
               <div className="flex items-center gap-2 text-status-critical">
                 <AlertTriangle size={18} />
-                <span className="font-semibold">Couldn’t reach the AI model</span>
+                <span className="font-semibold">WildMind is taking a quick breather</span>
               </div>
-              <p className="text-sm text-text-muted">{streamError}</p>
-              {FALLBACK_ENABLED ? (
+              {import.meta.env.PROD ? (
                 <p className="text-sm text-text-muted">
-                  Gemini is unavailable (often a rate limit) and the local Ollama fallback isn’t
-                  reachable. Start Ollama to keep things working:
-                  <code className="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-accent">
-                    ollama run llama3.2:1b
-                  </code>
-                </p>
-              ) : AI_PROVIDER === 'ollama' ? (
-                <p className="text-sm text-text-muted">
-                  Make sure Ollama is running and the model is pulled:
-                  <code className="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-accent">
-                    ollama run llama3.2:1b
-                  </code>
+                  Our AI naturalist is very busy right now and couldn’t finish this profile.
+                  Please wait a few moments and try again.
                 </p>
               ) : (
-                <p className="text-sm text-text-muted">
-                  Check that{' '}
-                  <code className="rounded bg-white/5 px-1.5 py-0.5 text-accent">
-                    VITE_GEMINI_API_KEY
-                  </code>{' '}
-                  is set correctly in your <code>.env</code> file.
-                </p>
+                <>
+                  <p className="text-sm text-text-muted">{streamError}</p>
+                  {FALLBACK_ENABLED ? (
+                    <p className="text-sm text-text-muted">
+                      Gemini is unavailable (often a rate limit) and the local Ollama fallback isn’t
+                      reachable. Start Ollama to keep things working:
+                      <code className="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-accent">
+                        ollama run llama3.2:1b
+                      </code>
+                    </p>
+                  ) : AI_PROVIDER === 'ollama' ? (
+                    <p className="text-sm text-text-muted">
+                      Make sure Ollama is running and the model is pulled:
+                      <code className="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-accent">
+                        ollama run llama3.2:1b
+                      </code>
+                    </p>
+                  ) : (
+                    <p className="text-sm text-text-muted">
+                      Check that{' '}
+                      <code className="rounded bg-white/5 px-1.5 py-0.5 text-accent">
+                        VITE_GEMINI_API_KEY
+                      </code>{' '}
+                      is set correctly in your <code>.env</code> file.
+                    </p>
+                  )}
+                </>
               )}
               <button
                 onClick={retry}

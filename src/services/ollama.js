@@ -100,7 +100,11 @@ async function streamGenerate(prompt, onChunk, onDone, options = {}) {
  */
 export async function streamAnimalProfile(animalName, onChunk, onDone) {
   const prompt =
-    `You are an expert wildlife biologist. Write a short, friendly profile of the ` +
+    `You are an expert wildlife biologist. ` +
+    `If "${animalName}" is not a real animal or living creature, do NOT invent a ` +
+    `profile — reply with exactly one line: ` +
+    `"🌿 \\"${animalName}\\" doesn't look like an animal I can profile — try a species like the Snow Leopard or Blue Whale." ` +
+    `Otherwise, write a short, friendly profile of the ` +
     `${animalName}. Organize it into 3 to 4 short sections. Each section MUST start ` +
     `with a Markdown "## " heading written in simple, plain words (for example: ` +
     `"## Meet the Animal", "## Where It Lives", "## How It Behaves", "## Cool Facts"), ` +
@@ -143,8 +147,16 @@ export async function warmModel() {
 export async function streamChat(messages, onChunk, onDone) {
   const systemPrompt =
     `You are WildMind, an expert AI wildlife biologist and naturalist. ` +
-    `Answer questions about animals, ecosystems, conservation, and the natural ` +
-    `world with accuracy and enthusiasm. ` +
+    `You ONLY answer questions about the living natural world: wild animals, their ` +
+    `biology and behaviour, ecosystems, habitats, biodiversity, conservation, ` +
+    `endangered species, plants, fungi, and the environment or climate as it relates ` +
+    `to wildlife. ` +
+    `If a question is outside this scope (e.g. physics, maths, history, politics, ` +
+    `technology, coding, celebrities, human medicine, or general trivia like ` +
+    `"what is gravity" or "what is an electron"), DO NOT answer it. Instead reply with ` +
+    `exactly one short, friendly sentence (under 40 words), starting with 🌿, saying it ` +
+    `is outside your wildlife focus and suggesting an example wildlife question instead. ` +
+    `When the question IS about wildlife, answer with accuracy and enthusiasm. ` +
     `Write in simple, everyday English that anyone can understand — like explaining ` +
     `to a curious 12-year-old. Use short sentences and common words; avoid jargon ` +
     `(if a scientific term is needed, explain it in plain words). ` +

@@ -171,31 +171,42 @@ export default function ChatPage() {
           <div className="flex items-start gap-2 rounded-card border border-status-critical/30 bg-status-critical/5 p-4 text-sm text-text-muted">
             <AlertTriangle size={18} className="mt-0.5 shrink-0 text-status-critical" />
             <div>
-              <p className="font-semibold text-status-critical">Couldn’t reach the AI model</p>
-              <p>{error}</p>
-              {FALLBACK_ENABLED ? (
+              <p className="font-semibold text-status-critical">WildMind is taking a quick breather</p>
+              {import.meta.env.PROD ? (
+                // Real visitors can't (and shouldn't) start a local model — keep it simple.
                 <p className="mt-1">
-                  Gemini is unavailable (often a rate limit) and the local Ollama fallback isn’t
-                  reachable. Start Ollama:
-                  <code className="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-accent">
-                    ollama run llama3.2:1b
-                  </code>
-                </p>
-              ) : AI_PROVIDER === 'ollama' ? (
-                <p className="mt-1">
-                  Ensure Ollama is running:
-                  <code className="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-accent">
-                    ollama run llama3.2:1b
-                  </code>
+                  Our AI naturalist is very busy right now and couldn’t respond. Please wait a
+                  few moments and try again.
                 </p>
               ) : (
-                <p className="mt-1">
-                  Check that{' '}
-                  <code className="rounded bg-white/5 px-1.5 py-0.5 text-accent">
-                    VITE_GEMINI_API_KEY
-                  </code>{' '}
-                  is set in your <code>.env</code> file.
-                </p>
+                // Dev builds: show the technical detail + how to bring a backend up.
+                <>
+                  <p>{error}</p>
+                  {FALLBACK_ENABLED ? (
+                    <p className="mt-1">
+                      Gemini is unavailable (often a rate limit) and the local Ollama fallback isn’t
+                      reachable. Start Ollama:
+                      <code className="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-accent">
+                        ollama run llama3.2:1b
+                      </code>
+                    </p>
+                  ) : AI_PROVIDER === 'ollama' ? (
+                    <p className="mt-1">
+                      Ensure Ollama is running:
+                      <code className="ml-1 rounded bg-white/5 px-1.5 py-0.5 text-accent">
+                        ollama run llama3.2:1b
+                      </code>
+                    </p>
+                  ) : (
+                    <p className="mt-1">
+                      Check that{' '}
+                      <code className="rounded bg-white/5 px-1.5 py-0.5 text-accent">
+                        VITE_GEMINI_API_KEY
+                      </code>{' '}
+                      is set in your <code>.env</code> file.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

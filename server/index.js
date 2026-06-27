@@ -37,6 +37,41 @@ const FALLBACK_IMAGE =
 const app = express()
 app.use(express.json({ limit: '1mb' }))
 
+// ── Basic abuse protection ────────────────────────────────────────────
+// The AI endpoints are public and spend YOUR Gemini/Groq quota, so cap how
+// often and how much any single visitor can send. In-memory is fine for a
+// single-instance Space; swap for a shared store if you ever scale out.
+app.set('trust proxy', true)
+
+const RATE_WINDOW_MS = 60_000 // 1 minute
+const RATE_MAX = 20 // AI requests per IP per window
+const MAX_MSG_LEN = 2000 // chars per chat message
+const MAX_HISTORY = 16 // most recent messages kept
+const MAX_NAME_LEN = 80 // chars for an animal name
+
+const rateHits = new Map() // ip -> { count, resetAt }
+function rateLimit(req, res, next) {
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown'
+  const now = Date.now()
+  let rec = rateHits.get(ip)
+  if (!rec || now > rec.resetAt) {
+    rec = { count: 0, resetAt: now + RATE_WINDOW_MS }
+    rateHits.set(ip, rec)
+  }
+  rec.count++
+  if (rec.count > RATE_MAX) {
+    const retry = Math.ceil((rec.resetAt - now) / 1000)
+    res.setHeader('Retry-After', String(retry))
+    return res.status(429).json({ error: `You're sending requests too quickly. Please wait ${retry}s and try again.` })
+  }
+  next()
+}
+// Drop stale buckets so the map can't grow without bound.
+setInterval(() => {
+  const now = Date.now()
+  for (const [ip, rec] of rateHits) if (now > rec.resetAt) rateHits.delete(ip)
+}, RATE_WINDOW_MS).unref?.()
+
 // ── Pexels image proxy ────────────────────────────────────────────────
 app.get('/api/pexels', async (req, res) => {
   const query = String(req.query.query || '').trim()
@@ -64,9 +99,21 @@ const CHAT_SYSTEM = {
   parts: [
     {
       text:
-        'You are WildMind, an expert AI wildlife biologist and naturalist. ' +
-        'Answer questions about animals, ecosystems, conservation, and the natural ' +
-        'world with accuracy and enthusiasm.\n\n' +
+        'You are WildMind, an expert AI wildlife biologist and naturalist.\n\n' +
+        'SCOPE — you ONLY answer questions about the living natural world: wild ' +
+        'animals, their biology and behaviour, ecosystems, habitats, biodiversity, ' +
+        'conservation, endangered species, plants, fungi, and the environment or ' +
+        'climate as it relates to wildlife.\n\n' +
+        'If a question is outside this scope — for example physics, chemistry, maths, ' +
+        'history, politics, technology, coding, sports, celebrities, human medicine, or ' +
+        'general trivia (e.g. "what is gravity", "what is an electron") — DO NOT answer ' +
+        'it and do not explain it even partially. Instead reply with exactly ONE short, ' +
+        'friendly sentence (under 40 words) that politely says it is outside your ' +
+        'wildlife focus, then suggest an example wildlife question to ask instead. ' +
+        'Start that reply with the 🌿 emoji. Questions that genuinely connect to nature ' +
+        '(such as how animals sense Earth\'s magnetic field, or how climate change ' +
+        'affects habitats) ARE in scope and should be answered normally.\n\n' +
+        'When the question IS in scope, answer with accuracy and enthusiasm.\n\n' +
         'Write in simple, everyday English that anyone can understand — like ' +
         'explaining to a curious 12-year-old. Use short sentences and common words, ' +
         'and avoid jargon (if a scientific term is needed, explain it in plain words).\n\n' +
@@ -83,7 +130,11 @@ const CHAT_SYSTEM = {
 
 function profilePrompt(animalName) {
   return (
-    `Write a short, friendly profile of the ${animalName}. ` +
+    `If "${animalName}" is not a real animal or living creature (for example a ` +
+    `concept, object, person, or place), do NOT invent a profile. Instead reply with ` +
+    `exactly one line and nothing else: ` +
+    `"🌿 \\"${animalName}\\" doesn't look like an animal I can profile — try a species like the Snow Leopard or Blue Whale." ` +
+    `Otherwise, write a short, friendly profile of the ${animalName}. ` +
     `Organize it into 3 to 4 short sections. Each section MUST start with a ` +
     `Markdown "## " heading written in simple, plain words (for example: ` +
     `"## Meet the Animal", "## Where It Lives", "## How It Behaves", ` +
@@ -213,19 +264,22 @@ async function streamGemini(res, contents, systemInstruction, generationConfig) 
   Readable.fromWeb(upstream.body).pipe(res)
 }
 
-app.post('/api/gemini/profile', (req, res) => {
-  const animalName = String(req.body?.animalName || '').trim()
+app.post('/api/gemini/profile', rateLimit, (req, res) => {
+  const animalName = String(req.body?.animalName || '').trim().slice(0, MAX_NAME_LEN)
   if (!animalName) return res.status(400).json({ error: 'animalName is required.' })
   const contents = [{ role: 'user', parts: [{ text: profilePrompt(animalName) }] }]
   streamGemini(res, contents, PROFILE_SYSTEM, { maxOutputTokens: 600 })
 })
 
-app.post('/api/gemini/chat', (req, res) => {
-  const messages = Array.isArray(req.body?.messages) ? req.body.messages : []
+app.post('/api/gemini/chat', rateLimit, (req, res) => {
+  const raw = Array.isArray(req.body?.messages) ? req.body.messages : []
+  // Keep only the most recent messages, and cap each one's length, to bound tokens.
+  const messages = raw.slice(-MAX_HISTORY)
   const contents = messages.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: String(m.content || '') }],
+    parts: [{ text: String(m.content || '').slice(0, MAX_MSG_LEN) }],
   }))
+  if (!contents.length) return res.status(400).json({ error: 'messages is required.' })
   streamGemini(res, contents, CHAT_SYSTEM, { maxOutputTokens: 1024 })
 })
 
